@@ -6,7 +6,7 @@
 #include <ESP8266WiFi.h>
 #include <Wire.h>
 
-//needed for the WiFiManager library
+// needed for the WiFiManager library
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>
@@ -18,30 +18,33 @@
 char mqtt_server[40];
 char mqtt_port[6] = "8080";
 
-//flag for saving data
+// flag for saving data
 bool shouldSaveConfig = false;
 
-//callback notifying us of the need to save config
-void saveConfigCallback () {
+// callback notifying us of the need to save config
+void saveConfigCallback()
+{
   Serial.println("Should save config");
   shouldSaveConfig = true;
 }
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println();
 
-  //clean FS, for testing
-  //SPIFFS.format();
+  // clean FS, for testing
+  //LittleFS.format();
 
-  //read configuration from FS json
+  // read configuration from FS json
   Serial.println("mounting FS...");
 
-  if (LittleFS.begin()) {
+  if (LittleFS.begin())
+  {
     Serial.println("mounted file system");
-    if (LittleFS.exists("/config.json")) {
-      //file exists, reading and loading
+    if (LittleFS.exists("/config.json"))
+    {
+      // file exists, reading and loading
       Serial.println("reading config file");
       File configFile = LittleFS.open("/config.json", "r");
       if (configFile) {
@@ -68,12 +71,12 @@ void setup() {
         configFile.close();
       }
     }
-  } else {
+  }
+  else
+  {
     Serial.println("failed to mount FS");
   }
   //end read
-
-
 
   // The extra parameters to be configured (can be either global or just in the setup)
   // After connecting, parameter.getValue() will get you the configured value
@@ -81,67 +84,70 @@ void setup() {
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6);
 
-  //WiFiManager
-  //Local intialization. Once its business is done, there is no need to keep it around
+  // WiFiManager
+  // Local intialization. Once its business is done, there is no need to keep it around
   WiFiManager wifiManager;
 
-  //set config save notify callback
+  // set config save notify callback
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  //set static ip
-  wifiManager.setSTAStaticIPConfig(IPAddress(10,0,1,99), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
-  
-  //add all your parameters here
+  // set static ip
+  // wifiManager.setSTAStaticIPConfig(IPAddress(10,0,1,99), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
+   
+  // add all your parameters here
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_mqtt_port);
-
-  //reset settings - for testing
-  //wifiManager.resetSettings();
-
-  //set minimu quality of signal so it ignores AP's under that quality
-  //defaults to 8%
-  //wifiManager.setMinimumSignalQuality();
-  
-  //sets timeout until configuration portal gets turned off
-  //useful to make it all retry or go to sleep
-  //in seconds
-  //wifiManager.setTimeout(120);
-
-  //fetches ssid and pass and tries to connect
-  //if it does not connect it starts an access point with the specified name
-  //here  "AutoConnectAP"
-  //and goes into a blocking loop awaiting configuration
-  if (!wifiManager.autoConnect("AutoConnectAP", "password")) {
-    Serial.println("failed to connect and hit timeout");
-    delay(3000);
-    //reset and try again, or maybe put it to deep sleep
-    ESP.reset();
-    delay(5000);
+ 
+  // reset settings - for testing
+  // wifiManager.resetSettings();
+ 
+  // set minimu quality of signal so it ignores AP's under that quality
+  // defaults to 8%
+  // wifiManager.setMinimumSignalQuality();
+   
+  // sets timeout until configuration portal gets turned off
+  // useful to make it all retry or go to sleep
+  // in seconds
+  // wifiManager.setTimeout(120);
+ 
+  // fetches ssid and pass and tries to connect
+  // if it does not connect it starts an access point with the specified name
+  // here  "AutoConnectAP"
+  // and goes into a blocking loop awaiting configuration
+  if  (!wifiManager.autoConnect("Lightning Sensor", "lightning"))
+  {
+     Serial.println("failed to connect and hit timeout");
+     delay(3000);
+     //reset and try again, or maybe put it to deep sleep
+     ESP.reset();
+     delay(5000);
   }
 
-  //if you get here you have connected to the WiFi
+  // if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
 
-  //read updated parameters
+  // read updated parameters
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
 
-  //save the custom parameters to FS
-  if (shouldSaveConfig) {
+  // save the custom parameters to FS
+  if (shouldSaveConfig)
+  {
     Serial.println("saving config");
     DynamicJsonDocument jsonBuffer(1024);
     jsonBuffer["mqtt_server"] = mqtt_server;
     jsonBuffer["mqtt_port"] = mqtt_port;
 
     File configFile = LittleFS.open("/config.json", "w");
-    if (!configFile) {
+    if (!configFile)
+    {
       Serial.println("failed to open config file for writing");
     }
 
     serializeJson(jsonBuffer, Serial);
     serializeJson(jsonBuffer, configFile);
     configFile.close();
-    //end save
+    // end save
   }
 
   Serial.println("local ip");
