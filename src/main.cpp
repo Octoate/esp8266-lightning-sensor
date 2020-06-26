@@ -14,9 +14,7 @@
 // JSON support
 #include <ArduinoJson.h> 
 
-// define your default values here, if there are different values in config.json, they are overwritten.
-char mqtt_server[40];
-char mqtt_port[6] = "8080";
+#include "config.h"
 
 // flag for saving data
 bool shouldSaveConfig = false;
@@ -34,7 +32,9 @@ void setup() {
   Serial.println();
 
   // clean FS, for testing
-  //LittleFS.format();
+#ifdef RESET_PARAMETER_CONFIG
+  LittleFS.format();
+#endif
 
   // read configuration from FS json
   Serial.println("mounting FS...");
@@ -98,26 +98,25 @@ void setup() {
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_mqtt_port);
  
+#ifdef RESET_WIFI_CONFIG
   // reset settings - for testing
-  // wifiManager.resetSettings();
- 
-  // set minimu quality of signal so it ignores AP's under that quality
-  // defaults to 8%
-  // wifiManager.setMinimumSignalQuality();
+  wifiManager.resetSettings();
+#endif
    
   // sets timeout until configuration portal gets turned off
   // useful to make it all retry or go to sleep
   // in seconds
-  // wifiManager.setTimeout(120);
+  wifiManager.setTimeout(180);
  
   // fetches ssid and pass and tries to connect
   // if it does not connect it starts an access point with the specified name
   // here  "AutoConnectAP"
   // and goes into a blocking loop awaiting configuration
-  if  (!wifiManager.autoConnect("Lightning Sensor", "lightning"))
+  if  (!wifiManager.autoConnect(wifiConfigSsid, wifiConfigPassword))
   {
      Serial.println("failed to connect and hit timeout");
      delay(3000);
+
      //reset and try again, or maybe put it to deep sleep
      ESP.reset();
      delay(5000);
