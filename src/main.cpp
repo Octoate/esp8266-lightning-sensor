@@ -14,10 +14,59 @@
 // JSON support
 #include <ArduinoJson.h> 
 
+// include the configuration
 #include "config.h"
+
+// support for MQTT
+#include <PubSubClient.h>
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 // flag for saving data
 bool shouldSaveConfig = false;
+
+void mqttReconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-LightningSensor";
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("test/sensor/lightning", "hello world");
+      // ... and resubscribe
+      client.subscribe("inTopic");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (unsigned int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  // Switch on the LED if an 1 was received as first character
+  if ((char)payload[0] == '1') {
+    digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on (Note that LOW is the voltage level
+    // but actually the LED is on; this is because
+    // it is active low on the ESP-01)
+  } else {
+    digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
+  }
+
+}
 
 // callback notifying us of the need to save config
 void saveConfigCallback()
@@ -151,8 +200,22 @@ void setup() {
 
   Serial.println("local ip");
   Serial.println(WiFi.localIP());
+
+  // set server
+  Serial.print("Server = ");
+  Serial.print(mqtt_server);
+  Serial.print(":");
+  Serial.println(atoi(mqtt_port));
+
+  // configure MQTT connection
+  client.setServer(mqtt_server, atoi(mqtt_port));
+  client.setCallback(mqttCallback);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // check MQTT client connection and call loop method of the MQTT client
+  if (!client.connected()) {
+    mqttReconnect();
+  }
+  client.loop();
 }
