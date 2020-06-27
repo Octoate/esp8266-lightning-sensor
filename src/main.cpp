@@ -35,7 +35,7 @@ void mqttReconnect() {
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("test/sensor/lightning", "hello world");
+      client.publish(mqtt_topic, "Lightning sensor online.");
       // ... and resubscribe
       client.subscribe("inTopic");
     } else {
@@ -65,7 +65,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   } else {
     digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
   }
-
 }
 
 // callback notifying us of the need to save config
@@ -115,6 +114,7 @@ void setup() {
 
           strcpy(mqtt_server, jsonBuffer["mqtt_server"]);
           strcpy(mqtt_port, jsonBuffer["mqtt_port"]);
+          strcpy(mqtt_topic, jsonBuffer["mqtt_topic"]);
         }
 
         configFile.close();
@@ -132,6 +132,7 @@ void setup() {
   // id/name placeholder/prompt default length
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6);
+  WiFiManagerParameter custom_mqtt_topic("topic", "mqtt topic", mqtt_topic, 256);
 
   // WiFiManager
   // Local intialization. Once its business is done, there is no need to keep it around
@@ -146,6 +147,7 @@ void setup() {
   // add all your parameters here
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_mqtt_port);
+  wifiManager.addParameter(&custom_mqtt_topic);
  
 #ifdef RESET_WIFI_CONFIG
   // reset settings - for testing
@@ -177,6 +179,7 @@ void setup() {
   // read updated parameters
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
+  strcpy(mqtt_topic, custom_mqtt_topic.getValue());
 
   // save the custom parameters to FS
   if (shouldSaveConfig)
@@ -185,6 +188,7 @@ void setup() {
     DynamicJsonDocument jsonBuffer(1024);
     jsonBuffer["mqtt_server"] = mqtt_server;
     jsonBuffer["mqtt_port"] = mqtt_port;
+    jsonBuffer["mqtt_topic"] = mqtt_topic;
 
     File configFile = LittleFS.open("/config.json", "w");
     if (!configFile)
@@ -206,6 +210,8 @@ void setup() {
   Serial.print(mqtt_server);
   Serial.print(":");
   Serial.println(atoi(mqtt_port));
+  Serial.print("Topic = ");
+  Serial.println(mqtt_topic);
 
   // configure MQTT connection
   client.setServer(mqtt_server, atoi(mqtt_port));

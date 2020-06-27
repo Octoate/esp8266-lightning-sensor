@@ -9,3 +9,4 @@ static const char wifiConfigPassword[] = "lightning";
 // define your default values here, if there are different values in config.json, they are overwritten.
 char mqtt_server[40];
 char mqtt_port[6] = "1883";
+char mqtt_topic[256] = "sensors/lightning";
